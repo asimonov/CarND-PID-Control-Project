@@ -3,6 +3,7 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+#include <fstream>
 
 // for convenience
 using json = nlohmann::json;
@@ -28,12 +29,42 @@ std::string hasData(std::string s) {
   return "";
 }
 
+void dumpToFile(std::string filename, std::string text) {
+  std::ofstream dataFile;
+  dataFile.open(filename, std::ios::trunc);
+  dataFile << text;
+  dataFile.close();
+}
+
+
 int main()
 {
   uWS::Hub h;
 
+  // Initialize the PID controller.
   PID pid;
-  // TODO: Initialize the pid variable.
+  double init_Kp = 0.1;
+  double init_Ki = 0.0001;
+  double init_Kd = 0.005;
+  unsigned int history_length = 100;
+  pid.Init(init_Kp, init_Ki, init_Kd, history_length);
+
+
+  // initialize logging infrastructure. all static to be accessible from lambdas
+  static long long frame = 0;
+  // full log
+  static std::ostringstream fileFullLogName;
+  fileFullLogName << "data/log-full.txt";
+  static std::ofstream fileFullLog;
+  fileFullLog.open(fileFullLogName.str(), std::ios::trunc); // remove file contents if it already exists
+  fileFullLog.close();
+  // controls log
+  static std::ostringstream fileLogName;
+  fileLogName << "data/log.txt";
+  static std::ofstream fileLog;
+  fileLog.open(fileLogName.str(), std::ios::trunc); // remove file contents if it already exists
+  fileLog.close();
+
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -42,32 +73,66 @@ int main()
     if (length && length > 2 && data[0] == '4' && data[1] == '2')
     {
       auto s = hasData(std::string(data));
+
       if (s != "") {
+
+        double in_steering =0.0;
+        double in_throttle =0.0;
+        double in_speed =0.0;
+        double in_cte = 0.0;
+        double out_throttle =0.0;
+        double out_steering =0.0;
+
+        frame++;
+        std::cout << "frame: " << frame << std::endl;
+
+        // save full log
+        fileFullLog.open(fileFullLogName.str(), std::ios::app);
+        fileFullLog << "frame: " << frame << std::endl;
+        fileFullLog << s << std::endl;
+        fileFullLog.close();
+
         auto j = json::parse(s);
         std::string event = j[0].get<std::string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          double cte = std::stod(j[1]["cte"].get<std::string>());
-          double speed = std::stod(j[1]["speed"].get<std::string>());
-          double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-          double steer_value;
+          in_steering = std::stod(j[1]["steering_angle"].get<std::string>());
+          in_throttle = std::stod(j[1]["throttle"].get<std::string>());
+          in_speed = std::stod(j[1]["speed"].get<std::string>());
+          in_cte = std::stod(j[1]["cte"].get<std::string>());
+
           /*
           * TODO: Calcuate steering value here, remember the steering value is
           * [-1, 1].
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          
+          out_steering = pid.PredictSteering(in_cte);
+          if (out_steering < -1.)
+            out_steering = -1.;
+          else if (out_steering > 1.)
+            out_steering = 1.;
+          pid.UpdateError(in_cte);
+
+          out_throttle = 0.1;
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          std::cout << "IN CTE: " << in_cte << " Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << std::endl;
 
           json msgJson;
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["steering_angle"] = out_steering;
+          msgJson["throttle"] = out_throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
+
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
+
+        // save full log
+        fileLog.open(fileLogName.str(), std::ios::app);
+        fileLog << frame << " " << in_steering << " " << in_throttle << " " << in_speed << " " << in_cte << " "
+                << out_steering << " " << out_throttle << std::endl;
+        fileLog.close();
+
       } else {
         // Manual driving
         std::string msg = "42[\"manual\",{}]";
