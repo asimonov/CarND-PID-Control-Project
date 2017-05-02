@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "PID.h"
 
 
@@ -9,15 +10,21 @@ PID::PID() {}
 
 PID::~PID() {}
 
-void PID::Init(double Kp, double Ki, double Kd, unsigned int memory_len)
+void PID::Init(double Kp, double Ki, double Kd, unsigned long integral_len, unsigned long twiddle_len)
 {
   Kp_ = Kp;
   Ki_ = Ki;
   Kd_ = Kd;
-  p_error_ = 0.0;
-  i_error_ = 0.0;
-  d_error_ = 0.0;
-  memory_len_ = memory_len;
+  // initial changes to try in Twiddle
+  d_Kp_ = 0.1 * Kp;
+  d_Ki_ = 0.1 * Ki;
+  d_Kd_ = 0.1 * Kd;
+  idx_current_param_ = 0;
+  up_down_unch_ = 0;
+  best_error_ = 1e+10;
+  // keep history of error
+  integral_len_ = integral_len;
+  twiddle_len_ = twiddle_len;
   total_steps_ = 0;
   cte_history_ = deque<double>();
 }
@@ -29,8 +36,9 @@ double PID::PredictSteering(double cte){
   if (cte_history_.size()>1)
   {
     cte_diff = cte - cte_history_.front();
-    for (double d : cte_history_)
-      cte_int += d;
+    //for (double d : cte_history_)
+    for (long i=0; i<std::min(integral_len_, cte_history_.size()); i++)
+      cte_int += cte_history_[i];
   }
   angle = -Kp_*cte - Ki_*cte_int - Kd_*cte_diff;
   return angle;
@@ -38,7 +46,7 @@ double PID::PredictSteering(double cte){
 
 void PID::UpdateError(double cte) {
   cte_history_.push_front(cte);
-  if (cte_history_.size() > memory_len_)
+  if (cte_history_.size() > std::max(integral_len_, twiddle_len_))
     cte_history_.pop_back();
   total_steps_++;
 }
@@ -48,5 +56,126 @@ double PID::TotalError() {
   for (double d : cte_history_)
     res += d*d;
   return res;
+}
+
+void PID::TwiddleIfEnoughHistory()
+{
+  std::ldiv_t d = std::ldiv(total_steps_, twiddle_len_);
+
+  if (d.rem == 0)
+  {
+    if (d.quot==1)
+      best_error_ = TotalError();
+    std::cout << "Twiddle step " << d.quot << ". Best error: " << best_error_ << std::endl;
+    switch (idx_current_param_)
+    {
+      case 0:// Kp tweaking
+        std::cout << "Twiddle tweaking: Kp" << std::endl;
+
+        if (up_down_unch_ == 0) {
+          up_down_unch_ = 1;
+          Kp_ += d_Kp_;
+        } else if (up_down_unch_ == 1)
+        {
+          double error = TotalError();
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            d_Kp_ *= 1.1;
+          } else {
+            up_down_unch_ = -1;
+            Kp_ -= 2*d_Kp_;
+          }
+        } else {
+          // up_down_unch_ == -1
+          double error = TotalError();
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            d_Kp_ *= 1.1;
+          } else {
+            Kp_ += d_Kp_;
+            d_Kp_ *= 0.9;
+            up_down_unch_ = 0;
+
+            idx_current_param_ = 1;
+            TwiddleIfEnoughHistory(); // just handle the next parameter
+          }
+        }
+        break;
+
+      case 1:// Ki tweaking
+        std::cout << "Twiddle tweaking: Ki" << std::endl;
+
+        if (up_down_unch_ == 0) {
+          up_down_unch_ = 1;
+          Ki_ += d_Ki_;
+        } else if (up_down_unch_ == 1)
+        {
+          double error = TotalError();
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            d_Ki_ *= 1.1;
+          } else {
+            up_down_unch_ = -1;
+            Ki_ -= 2*d_Ki_;
+          }
+        } else {
+          // up_down_unch_ == -1
+          double error = TotalError();
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            d_Ki_ *= 1.1;
+          } else {
+            Ki_ += d_Ki_;
+            d_Ki_ *= 0.9;
+            up_down_unch_ = 0;
+
+            idx_current_param_ = 2;
+            TwiddleIfEnoughHistory(); // just handle the next parameter
+          }
+        }
+        break;
+
+      case 2:// Kd tweaking
+        std::cout << "Twiddle tweaking: Kd" << std::endl;
+
+        if (up_down_unch_ == 0) {
+          up_down_unch_ = 1;
+          Kd_ += d_Kd_;
+        } else if (up_down_unch_ == 1)
+        {
+          double error = TotalError();
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            d_Kd_ *= 1.1;
+          } else {
+            up_down_unch_ = -1;
+            Kd_ -= 2*d_Kd_;
+          }
+        } else {
+          // up_down_unch_ == -1
+          double error = TotalError();
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            d_Kd_ *= 1.1;
+          } else {
+            Kd_ += d_Kd_;
+            d_Kd_ *= 0.9;
+            up_down_unch_ = 0;
+
+            idx_current_param_ = 0;
+            TwiddleIfEnoughHistory(); // just handle the next parameter
+          }
+        }
+        break;
+    }
+    std::cout << "Twiddle end params: Kp = " << Kp_ << " Ki = " << Ki_ << " Kd = " << Kd_ << std::endl << std::endl;
+
+  }
 }
 

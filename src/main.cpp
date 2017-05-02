@@ -4,6 +4,7 @@
 #include "PID.h"
 #include <math.h>
 #include <fstream>
+#include <stdlib.h>
 
 // for convenience
 using json = nlohmann::json;
@@ -43,11 +44,12 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  double init_Kp = 0.1;
+  double init_Kp = 0.098;
   double init_Ki = 0.0001;
   double init_Kd = 0.005;
-  unsigned int history_length = 100;
-  pid.Init(init_Kp, init_Ki, init_Kd, history_length);
+  static unsigned int integral_length = 100;
+  static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
+  pid.Init(init_Kp, init_Ki, init_Kd, integral_length, twiddle_length);
 
 
   // initialize logging infrastructure. all static to be accessible from lambdas
@@ -84,13 +86,14 @@ int main()
         double out_steering =0.0;
 
         frame++;
-        std::cout << "frame: " << frame << std::endl;
+        if (std::ldiv(frame, 100).rem==0)
+          std::cout << "frame: " << frame << std::endl;
 
         // save full log
-        fileFullLog.open(fileFullLogName.str(), std::ios::app);
-        fileFullLog << "frame: " << frame << std::endl;
-        fileFullLog << s << std::endl;
-        fileFullLog.close();
+//        fileFullLog.open(fileFullLogName.str(), std::ios::app);
+//        fileFullLog << "frame: " << frame << std::endl;
+//        fileFullLog << s << std::endl;
+//        fileFullLog.close();
 
         auto j = json::parse(s);
         std::string event = j[0].get<std::string>();
@@ -102,7 +105,7 @@ int main()
           in_cte = std::stod(j[1]["cte"].get<std::string>());
 
           /*
-          * TODO: Calcuate steering value here, remember the steering value is
+          * Calcuate steering value here, remember the steering value is
           * [-1, 1].
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
@@ -113,16 +116,17 @@ int main()
           else if (out_steering > 1.)
             out_steering = 1.;
           pid.UpdateError(in_cte);
+          pid.TwiddleIfEnoughHistory();
 
           out_throttle = 0.1;
           // DEBUG
-          std::cout << "IN CTE: " << in_cte << " Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << std::endl;
+//          std::cout << "IN CTE: " << in_cte << " Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = out_steering;
           msgJson["throttle"] = out_throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+//          std::cout << msg << std::endl;
 
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
