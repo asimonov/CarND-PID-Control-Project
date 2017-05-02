@@ -44,11 +44,12 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  double init_Kp = 0.098;
-  double init_Ki = 0.0001;
+  double init_Kp = 0.31;
+  double init_Ki = 0.00009;
   double init_Kd = 0.005;
   static unsigned int integral_length = 100;
-  static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
+  //static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
+  static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
   pid.Init(init_Kp, init_Ki, init_Kd, integral_length, twiddle_length);
 
 
@@ -86,7 +87,7 @@ int main()
         double out_steering =0.0;
 
         frame++;
-        if (std::ldiv(frame, 100).rem==0)
+        if (std::ldiv(frame, 200).rem==0)
           std::cout << "frame: " << frame << std::endl;
 
         // save full log
@@ -118,7 +119,8 @@ int main()
           pid.UpdateError(in_cte);
           pid.TwiddleIfEnoughHistory();
 
-          out_throttle = 0.1;
+          //out_throttle = 0.1;
+          out_throttle = 0.15;
           // DEBUG
 //          std::cout << "IN CTE: " << in_cte << " Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << std::endl;
 

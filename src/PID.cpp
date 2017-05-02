@@ -73,31 +73,43 @@ void PID::TwiddleIfEnoughHistory()
         std::cout << "Twiddle tweaking: Kp" << std::endl;
 
         if (up_down_unch_ == 0) {
+          std::cout << "bump: up" << std::endl;
           up_down_unch_ = 1;
           Kp_ += d_Kp_;
-        } else if (up_down_unch_ == 1)
-        {
+        } else if (up_down_unch_ == 1) {
           double error = TotalError();
+          std::cout << "error: " << error << std::endl;
           if (error < best_error_)
           {
             best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
             d_Kp_ *= 1.1;
+            std::cout << "bump: up" << std::endl;
+            Kp_ += d_Kp_;
           } else {
+            std::cout << "bump: down" << std::endl;
             up_down_unch_ = -1;
             Kp_ -= 2*d_Kp_;
           }
         } else {
           // up_down_unch_ == -1
           double error = TotalError();
+          std::cout << "error: " << error << std::endl;
           if (error < best_error_)
           {
             best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
             d_Kp_ *= 1.1;
+            std::cout << "bump: down" << std::endl;
+            Kp_ -= d_Kp_;
           } else {
+            std::cout << "bump: up (to unch)" << std::endl;
             Kp_ += d_Kp_;
+            std::cout << "bump size: decrease" << std::endl;
             d_Kp_ *= 0.9;
             up_down_unch_ = 0;
 
+            std::cout << "move to next param" << std::endl;
             idx_current_param_ = 1;
             TwiddleIfEnoughHistory(); // just handle the next parameter
           }
@@ -108,31 +120,43 @@ void PID::TwiddleIfEnoughHistory()
         std::cout << "Twiddle tweaking: Ki" << std::endl;
 
         if (up_down_unch_ == 0) {
+          std::cout << "bump: up" << std::endl;
           up_down_unch_ = 1;
           Ki_ += d_Ki_;
-        } else if (up_down_unch_ == 1)
-        {
+        } else if (up_down_unch_ == 1) {
           double error = TotalError();
+          std::cout << "error: " << error << std::endl;
           if (error < best_error_)
           {
             best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
             d_Ki_ *= 1.1;
+            std::cout << "bump: up" << std::endl;
+            Ki_ += d_Ki_;
           } else {
+            std::cout << "bump: down" << std::endl;
             up_down_unch_ = -1;
             Ki_ -= 2*d_Ki_;
           }
         } else {
           // up_down_unch_ == -1
           double error = TotalError();
+          std::cout << "error: " << error << std::endl;
           if (error < best_error_)
           {
             best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
             d_Ki_ *= 1.1;
+            std::cout << "bump: down" << std::endl;
+            Ki_ -= d_Ki_;
           } else {
+            std::cout << "bump: up (to unch)" << std::endl;
             Ki_ += d_Ki_;
+            std::cout << "bump size: decrease" << std::endl;
             d_Ki_ *= 0.9;
             up_down_unch_ = 0;
 
+            std::cout << "move to next param" << std::endl;
             idx_current_param_ = 2;
             TwiddleIfEnoughHistory(); // just handle the next parameter
           }
@@ -143,31 +167,43 @@ void PID::TwiddleIfEnoughHistory()
         std::cout << "Twiddle tweaking: Kd" << std::endl;
 
         if (up_down_unch_ == 0) {
+          std::cout << "bump: up" << std::endl;
           up_down_unch_ = 1;
           Kd_ += d_Kd_;
-        } else if (up_down_unch_ == 1)
-        {
+        } else if (up_down_unch_ == 1) {
           double error = TotalError();
+          std::cout << "error: " << error << std::endl;
           if (error < best_error_)
           {
             best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
             d_Kd_ *= 1.1;
+            std::cout << "bump: up" << std::endl;
+            Kd_ += d_Kd_;
           } else {
+            std::cout << "bump: down" << std::endl;
             up_down_unch_ = -1;
             Kd_ -= 2*d_Kd_;
           }
         } else {
           // up_down_unch_ == -1
           double error = TotalError();
+          std::cout << "error: " << error << std::endl;
           if (error < best_error_)
           {
             best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
             d_Kd_ *= 1.1;
+            std::cout << "bump: down" << std::endl;
+            Kd_ -= d_Kd_;
           } else {
+            std::cout << "bump: up (to unch)" << std::endl;
             Kd_ += d_Kd_;
+            std::cout << "bump size: decrease" << std::endl;
             d_Kd_ *= 0.9;
             up_down_unch_ = 0;
 
+            std::cout << "move to next param" << std::endl;
             idx_current_param_ = 0;
             TwiddleIfEnoughHistory(); // just handle the next parameter
           }
