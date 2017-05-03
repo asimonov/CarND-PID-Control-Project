@@ -46,9 +46,9 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  double init_Kp = 0.32;
+  double init_Kp = 0.45;
   double init_Ki = 0.00;
-  double init_Kd = 1.6;
+  double init_Kd = 5.0;
   static unsigned int integral_length = 100;
   //static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
   //static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
@@ -126,7 +126,7 @@ int main()
           else if (out_steering > 1.)
             out_steering = 1.;
           pid.UpdateError(in_cte, in_speed, dt);
-          pid.TwiddleIfEnoughHistory();
+          //pid.TwiddleIfEnoughHistory();
 
           //out_throttle = 0.1;
           //out_throttle = 0.15;
