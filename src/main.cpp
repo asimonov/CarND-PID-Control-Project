@@ -46,10 +46,10 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  double init_Kp = 0.6;
-  double init_Ki = 0.2;
-  double init_Kd = 10.0;
-  static unsigned int integral_length = 3;
+  static double init_Kp = 0.65;
+  static double init_Ki = 0.2;
+  static double init_Kd = 11.0;
+  static unsigned int integral_length = 2;
   //static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
   //static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
   static unsigned int twiddle_length = 1400; // this is when to optimize twiddle. every lap
@@ -120,7 +120,19 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
+
+          if (frame > 100 && in_speed > 65.)
+            out_throttle = 0.1;
+          else
+            out_throttle = 1.0;
+
           out_steering = pid.PredictSteering(in_cte, in_speed, dt);
+
+          if (frame > 100 && (abs(out_steering) > 0.2))
+            out_throttle = 0.1;
+          else
+            out_throttle = 1.0;
+
           if (out_steering < -1.)
             out_steering = -1.;
           else if (out_steering > 1.)
@@ -128,14 +140,9 @@ int main()
           pid.UpdateError(in_cte, in_speed, dt);
           //pid.TwiddleIfEnoughHistory();
 
-          //out_throttle = 0.1;
-          //out_throttle = 0.15;
-          if (frame > 100 && abs(out_steering) > 0.2)
-            out_throttle = 0.05;
-          else
-            out_throttle = 0.6;
           // DEBUG
-          std::cout << "IN CTE: " << in_cte << " Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << std::endl;
+          //std::cout << "IN CTE: " << in_cte << ", speed: " << in_speed << ". Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << ". Throttle: " << out_throttle << std::endl;
+          std::cout << "IN CTE: " << in_cte << ", speed: " << in_speed << ". Steering Value: " << out_steering << ". Throttle: " << out_throttle << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = out_steering;

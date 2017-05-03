@@ -46,15 +46,15 @@ public:
   */
   void TwiddleIfEnoughHistory();
 
-
-
-private:
     /*
     * Coefficients
     */
     double Kp_;
     double Ki_;
     double Kd_;
+
+
+private:
     /*
     * Coefficient changes for Twiddle
     */
