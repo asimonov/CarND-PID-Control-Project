@@ -27,27 +27,46 @@ void PID::Init(double Kp, double Ki, double Kd, unsigned long integral_len, unsi
   twiddle_len_ = twiddle_len;
   total_steps_ = 0;
   cte_history_ = deque<double>();
+  speed_history_ = deque<double>();
+  dt_history_ = deque<double>();
 }
 
-double PID::PredictSteering(double cte){
+double PID::PredictSteering(double cte, double speed, double dt){
   double angle = 0.0;
+  double factor = 100.0;
+  double speed_adj = speed > 0 ? speed : 0.001;
+  double cte_adj = cte/(factor * speed_adj * dt);
   double cte_diff = 0.0;
-  double cte_int = cte;
+  double cte_int = cte_adj;
+  // assuming history objects do not yet contain the current observations
   if (cte_history_.size()>1)
   {
-    cte_diff = cte - cte_history_.front();
-    //for (double d : cte_history_)
+    int cnt = 0;
     for (long i=0; i<std::min(integral_len_, cte_history_.size()); i++)
-      cte_int += cte_history_[i];
+    {
+      double c = cte_history_[i] / (factor * speed_history_[i]*dt_history_[i]);
+      if (i==0)
+        cte_diff = cte_adj - c;
+      cte_int += c;
+      cnt++;
+    }
+    cte_int /= cnt;
   }
-  angle = -Kp_*cte - Ki_*cte_int - Kd_*cte_diff;
+  angle = -Kp_*cte_adj - Ki_*cte_int - Kd_*cte_diff;
   return angle;
 }
 
-void PID::UpdateError(double cte) {
+void PID::UpdateError(double cte, double speed, double dt) {
   cte_history_.push_front(cte);
+  double speed_adj = speed > 0 ? speed : 0.001;
+  speed_history_.push_front(speed_adj);
+  dt_history_.push_front(dt);
   if (cte_history_.size() > std::max(integral_len_, twiddle_len_))
+  {
     cte_history_.pop_back();
+    speed_history_.pop_back();
+    dt_history_.pop_back();
+  }
   total_steps_++;
 }
 

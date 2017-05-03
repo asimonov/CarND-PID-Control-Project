@@ -29,12 +29,12 @@ public:
   /*
   * Predict Steering angle.
   */
-  double PredictSteering(double cte);
+  double PredictSteering(double cte, double speed, double dt);
 
   /*
   * Update the PID error variables given cross track error.
   */
-  void UpdateError(double cte);
+  void UpdateError(double cte, double speed, double dt);
 
   /*
   * Calculate the total PID error.
@@ -66,6 +66,8 @@ private:
     double best_error_; // best error seen so far in twiddle
 
     deque<double> cte_history_;
+    deque<double> dt_history_;
+    deque<double> speed_history_;
     unsigned long integral_len_;
     unsigned long twiddle_len_;
     unsigned long total_steps_;

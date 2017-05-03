@@ -4,6 +4,8 @@
 #include "PID.h"
 #include <math.h>
 #include <fstream>
+#include <ctime>
+
 #include <stdlib.h>
 
 // for convenience
@@ -44,12 +46,13 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  double init_Kp = 0.31;
-  double init_Ki = 0.00009;
-  double init_Kd = 0.005;
+  double init_Kp = 0.32;
+  double init_Ki = 0.00;
+  double init_Kd = 1.6;
   static unsigned int integral_length = 100;
   //static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
-  static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
+  //static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
+  static unsigned int twiddle_length = 1600; // this is when to optimize twiddle. every lap
   pid.Init(init_Kp, init_Ki, init_Kd, integral_length, twiddle_length);
 
 
@@ -68,6 +71,7 @@ int main()
   fileLog.open(fileLogName.str(), std::ios::trunc); // remove file contents if it already exists
   fileLog.close();
 
+  static int prev_time = 0;
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -87,6 +91,11 @@ int main()
         double out_steering =0.0;
 
         frame++;
+
+        int stop = clock();
+        double dt = (prev_time > 0) ? (stop - prev_time) / double(CLOCKS_PER_SEC) : 0.001;
+        prev_time = stop;
+
         if (std::ldiv(frame, 200).rem==0)
           std::cout << "frame: " << frame << std::endl;
 
@@ -111,18 +120,19 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          out_steering = pid.PredictSteering(in_cte);
+          out_steering = pid.PredictSteering(in_cte, in_speed, dt);
           if (out_steering < -1.)
             out_steering = -1.;
           else if (out_steering > 1.)
             out_steering = 1.;
-          pid.UpdateError(in_cte);
+          pid.UpdateError(in_cte, in_speed, dt);
           pid.TwiddleIfEnoughHistory();
 
           //out_throttle = 0.1;
-          out_throttle = 0.15;
+          //out_throttle = 0.15;
+          out_throttle = 0.3;
           // DEBUG
-//          std::cout << "IN CTE: " << in_cte << " Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << std::endl;
+          std::cout << "IN CTE: " << in_cte << " Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = out_steering;
