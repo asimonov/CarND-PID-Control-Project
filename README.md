@@ -22,10 +22,36 @@ Proportional part of PID.
 Integral part of PID is used to correct for persistent bias, if it exists. Like a side wind
 pushing the car off track etc. In this problem integral part was not required.
 
-Here is a video of the implementation:
+Here is a video of the final implementation performance:
 [![Screenshot of simulator](./video/screen-shot.png)](https://www.youtube.com/watch?v=7fMuwekzXyE)
 
-[test](https://www.youtube.com/watch?v=7fMuwekzXyE)
+Here I set Integral coefficient to zero to start with.
+
+At first I used Twiddle algorithm to find optimal P, I, D parameters by running the simulator for
+constant speed of around 25mph and calibrating the total error over all measurements over the
+course of one full lap. This did not work fantastically well. 
+It was slow and the resulting parameters
+were not ideal. I have found it easier to tweak parameters by hand.
+
+I then set a speed limit at 20mph and found I and D coefficients so that the car path
+is very stable and close to the centerline.
+
+I then increased the speed limit to 30mph and scaled my I and D coefficients that I used
+for 20mph so that: I has decreased (to be less sensitive at higher speed) and D is increased 
+to dampen any oscillations harder.
+
+I then proceeded to repeat the parameter scaling for 40, 50, 60 and 70 mph.
+The final PID controller parameters are graduated depending on current simulator speed.
+I also ease off accelerator when steering angle goes above 3.75 degrees either way.
+
+The PID-controlled car manages to go between about 55mph and 70mph, 
+depending on the part of the track.
+The trickiest part is the first left corner after the bridge because it is preceeded by
+straight path where car accelerates up to the tight turn. 
+Because the controller is not predicting what would happen and only
+responding based on current and some historical measurements it does not react very quickly.
+One way to improve response here would be to increase P coefficient. But that would result
+in instability on straigh parts of the track.
 
 
 ## Dependencies
