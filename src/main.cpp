@@ -48,16 +48,16 @@ int main()
   PID pid;
 
   // PID parameters
-  double init_Kp = 0.66;
-  double init_Ki = 0.15;
-  double init_Kd = 12.0;
+  double init_Kp = 0.15;
+  double init_Ki = 0.0;
+  double init_Kd = 0.6;
   unsigned int integral_length = 2;
   unsigned int twiddle_length = 1400; // this is when to optimize twiddle. ideally from each lap. UNUSED
 
   pid.Init(init_Kp, init_Ki, init_Kd, integral_length, twiddle_length);
 
   // extra control parameters outside of PID
-  double speed_limit = 70.0; // full throttle below this speed. brake above this speed.
+  double speed_limit = 80.0; // full throttle below this speed. brake above this speed.
   double safe_steering = 0.15; // full throttle below this steering angle. no throttle above
 
   // logging infrastructure
@@ -111,30 +111,41 @@ int main()
             out_throttle = 1.0;
 
           // vary PID parameters with speed. higher speed makes system more sensitive
-          if (in_speed < 50.)
+          // hence we decrease proportional control and increase derivative control (to dampen oscillations)
+          if (in_speed < 20.)
           {
             pid.Kp_ = init_Kp;
             pid.Kd_ = init_Kd;
           }
-          else if (in_speed < 60.)
-          {
-            pid.Kp_ = init_Kp * 0.95;
-            pid.Kd_ = init_Kd * 1.2;
-          }
-          else if (in_speed < 66.)
+          else if (in_speed < 30.)
           {
             pid.Kp_ = init_Kp * 0.9;
-            pid.Kd_ = init_Kd * 1.4;
+            pid.Kd_ = init_Kd * 1.2;
           }
-          else if (in_speed < 73.)
+          else if (in_speed < 40.)
           {
-            pid.Kp_ = init_Kp * 0.85;
+            pid.Kp_ = init_Kp * 0.75;
             pid.Kd_ = init_Kd * 1.6;
           }
-          else
+          else if (in_speed < 50.)
           {
-            pid.Kp_ = init_Kp * 0.6;
-            pid.Kd_ = init_Kd * 1.8;
+            pid.Kp_ = init_Kp * 0.65;
+            pid.Kd_ = init_Kd * 2.0;
+          }
+          else if (in_speed < 60.)
+          {
+            pid.Kp_ = init_Kp * 0.55;
+            pid.Kd_ = init_Kd * 2.5;
+          }
+          else if (in_speed < 70.)
+          {
+            pid.Kp_ = init_Kp * 0.45;
+            pid.Kd_ = init_Kd * 3.0;
+          }
+          else //if (in_speed > 70.)
+          {
+            pid.Kp_ = init_Kp * 0.35;
+            pid.Kd_ = init_Kd * 4.0;
           }
 
           // predict the steering angle using PID controller

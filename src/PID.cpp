@@ -34,8 +34,8 @@ void PID::Init(double Kp, double Ki, double Kd, unsigned long integral_len, unsi
 double PID::PredictSteering(double cte, double speed, double dt){
   double angle = 0.0;
   double factor = 100.0;
-  double speed_adj = speed > 0 ? speed : 0.001;
-  double cte_adj = cte/(factor * speed_adj * dt);
+  double speed_adj = speed;// > 0 ? speed : 0.001;
+  double cte_adj = cte;// /(factor * speed_adj * dt);
   double cte_diff = 0.0;
   double cte_int = cte_adj;
   // assuming history objects do not yet contain the current observations
@@ -44,7 +44,7 @@ double PID::PredictSteering(double cte, double speed, double dt){
     int cnt = 0;
     for (long i=0; i<std::min(integral_len_, cte_history_.size()); i++)
     {
-      double c = cte_history_[i] / (factor * speed_history_[i]*dt_history_[i]);
+      double c = cte_history_[i]; // / (factor * speed_history_[i]*dt_history_[i]);
       if (i==0)
         cte_diff = (cte_adj - c);
       cte_int += c;
