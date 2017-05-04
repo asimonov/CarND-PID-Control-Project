@@ -46,7 +46,7 @@ double PID::PredictSteering(double cte, double speed, double dt){
     {
       double c = cte_history_[i] / (factor * speed_history_[i]*dt_history_[i]);
       if (i==0)
-        cte_diff = cte_adj - c;
+        cte_diff = (cte_adj - c);
       cte_int += c;
       cnt++;
     }

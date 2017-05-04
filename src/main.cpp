@@ -46,9 +46,9 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  static double init_Kp = 1.0;
-  static double init_Ki = 0.1;
-  static double init_Kd = 9.0;
+  static double init_Kp = 0.6;
+  static double init_Ki = 0.15;
+  static double init_Kd = 10.0;
   static unsigned int integral_length = 2;
   //static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
   //static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
@@ -121,24 +121,24 @@ int main()
           * another PID controller to control the speed!
           */
 
-          if (in_speed > 70.)
-            out_throttle = -1.0;
+          if (in_speed > 55.)
+            out_throttle = -0.1;
           else
             out_throttle = 1.0;
 
-          if (in_cte < 1.)
-            pid.Kp_ = init_Kp * 0.5;
-          else if (in_cte < 2.)
-            pid.Kp_ = init_Kp * 0.8;
-          else
-          {
-            pid.Kp_ = init_Kp * 1.0;
-            out_throttle = -1.0;
-          }
+//          if (in_cte < 1.)
+//            pid.Kp_ = init_Kp * 0.5;
+//          else if (in_cte < 2.)
+//            pid.Kp_ = init_Kp * 0.8;
+//          else
+//          {
+//            pid.Kp_ = init_Kp * 1.0;
+//            out_throttle = -1.0;
+//          }
 
           out_steering = pid.PredictSteering(in_cte, in_speed, dt);
 
-          if (frame > 100 && (abs(out_steering) > 0.1))
+          if (frame > 100 && (abs(out_steering) > 0.15))
             out_throttle = 0.0;
 //          else
 //            out_throttle = 1.0;
