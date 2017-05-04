@@ -121,28 +121,37 @@ int main()
           * another PID controller to control the speed!
           */
 
-          if (in_speed > 55.)
+          // limit speed with braking
+          if (in_speed > 65.)
             out_throttle = -0.1;
           else
             out_throttle = 1.0;
 
-//          if (in_cte < 1.)
-//            pid.Kp_ = init_Kp * 0.5;
-//          else if (in_cte < 2.)
-//            pid.Kp_ = init_Kp * 0.8;
-//          else
-//          {
-//            pid.Kp_ = init_Kp * 1.0;
-//            out_throttle = -1.0;
-//          }
+          // vary PID parameters with speed. higher speed makes system more sensitive
+          if (in_speed < 50.)
+          {
+            pid.Kp_ = init_Kp;
+            pid.Kd_ = init_Kd;
+          }
+          else if (in_speed < 60.)
+          {
+            pid.Kp_ = init_Kp * 0.8;
+            pid.Kd_ = init_Kd * 1.2;
+          }
+          else
+          {
+            pid.Kp_ = init_Kp * 0.5;
+            pid.Kd_ = init_Kd * 1.5;
+          }
 
+          // predict the steering angle
           out_steering = pid.PredictSteering(in_cte, in_speed, dt);
 
+          // slow down if steering too steep
           if (frame > 100 && (abs(out_steering) > 0.15))
             out_throttle = 0.0;
-//          else
-//            out_throttle = 1.0;
 
+          // normalize steering
           if (out_steering < -1.)
             out_steering = -1.;
           else if (out_steering > 1.)
