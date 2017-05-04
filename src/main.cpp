@@ -46,34 +46,27 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  static double init_Kp = 0.66;
-  static double init_Ki = 0.15;
-  static double init_Kd = 11.0;
-  static unsigned int integral_length = 2;
-  //static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
-  //static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
-  static unsigned int twiddle_length = 1400; // this is when to optimize twiddle. every lap
+
+  // PID parameters
+  double init_Kp = 0.66;
+  double init_Ki = 0.15;
+  double init_Kd = 12.0;
+  unsigned int integral_length = 2;
+  unsigned int twiddle_length = 1400; // this is when to optimize twiddle. ideally from each lap. UNUSED
+
   pid.Init(init_Kp, init_Ki, init_Kd, integral_length, twiddle_length);
 
+  // extra control parameters outside of PID
+  double speed_limit = 70.0; // full throttle below this speed. brake above this speed.
+  double safe_steering = 0.15; // full throttle below this steering angle. no throttle above
 
-  // initialize logging infrastructure. all static to be accessible from lambdas
-  static long long frame = 0;
-  // full log
-  static std::ostringstream fileFullLogName;
-  fileFullLogName << "data/log-full.txt";
-  static std::ofstream fileFullLog;
-  fileFullLog.open(fileFullLogName.str(), std::ios::trunc); // remove file contents if it already exists
-  fileFullLog.close();
-  // controls log
-  static std::ostringstream fileLogName;
-  fileLogName << "data/log.txt";
-  static std::ofstream fileLog;
-  fileLog.open(fileLogName.str(), std::ios::trunc); // remove file contents if it already exists
-  fileLog.close();
+  // logging infrastructure
+  long long frame = 0;
+  int prev_time = 0;
 
-  static int prev_time = 0;
-
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  h.onMessage(
+    [&pid,&init_Kp,&init_Ki,&init_Kd,&frame,&prev_time,&safe_steering,&speed_limit]
+    (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -90,20 +83,17 @@ int main()
         double out_throttle =0.0;
         double out_steering =0.0;
 
+        // increment measurement count
         frame++;
 
+        // calculate delta_t from last observation
         int stop = clock();
         double dt = (prev_time > 0) ? (stop - prev_time) / double(CLOCKS_PER_SEC) : 0.001;
         prev_time = stop;
 
+        // print number of measurements processed from time to time
         if (std::ldiv(frame, 200).rem==0)
           std::cout << "frame: " << frame << std::endl;
-
-        // save full log
-//        fileFullLog.open(fileFullLogName.str(), std::ios::app);
-//        fileFullLog << "frame: " << frame << std::endl;
-//        fileFullLog << s << std::endl;
-//        fileFullLog.close();
 
         auto j = json::parse(s);
         std::string event = j[0].get<std::string>();
@@ -114,15 +104,8 @@ int main()
           in_speed = std::stod(j[1]["speed"].get<std::string>());
           in_cte = std::stod(j[1]["cte"].get<std::string>());
 
-          /*
-          * Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
-
           // limit speed with braking
-          if (in_speed > 90.)
+          if (in_speed > speed_limit)
             out_throttle = -0.1;
           else
             out_throttle = 1.0;
@@ -154,40 +137,34 @@ int main()
             pid.Kd_ = init_Kd * 1.8;
           }
 
-          // predict the steering angle
+          // predict the steering angle using PID controller
           out_steering = pid.PredictSteering(in_cte, in_speed, dt);
 
-          // slow down if steering too steep
-          if (frame > 100 && (abs(out_steering) > 0.15))
+          // ease off accelerator if steering is too steep
+          if (frame > 100 && (abs(out_steering) > safe_steering))
             out_throttle = 0.0;
 
-          // normalize steering
+          // normalize steering to be [-1, 1]
           if (out_steering < -1.)
             out_steering = -1.;
           else if (out_steering > 1.)
             out_steering = 1.;
 
+          // record new error in PID history for later use
           pid.UpdateError(in_cte, in_speed, dt);
+          // Twiddle iteration process. UNUSED as it was found ineffective.
           //pid.TwiddleIfEnoughHistory();
 
-          // DEBUG
-          //std::cout << "IN CTE: " << in_cte << ", speed: " << in_speed << ". Total Error: " << pid.TotalError() << " Steering Value: " << out_steering << ". Throttle: " << out_throttle << std::endl;
-          std::cout << "IN CTE: " << in_cte << ", speed: " << in_speed << ". Steering Value: " << out_steering << ". Throttle: " << out_throttle << std::endl;
+          // DEBUG print
+          std::cout << "IN: CTE: " << in_cte << ", speed: " << in_speed << ".     OUT: Steering Value: " << out_steering << ". Throttle: " << out_throttle << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = out_steering;
           msgJson["throttle"] = out_throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-//          std::cout << msg << std::endl;
 
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
-
-        // save full log
-        fileLog.open(fileLogName.str(), std::ios::app);
-        fileLog << frame << " " << in_steering << " " << in_throttle << " " << in_speed << " " << in_cte << " "
-                << out_steering << " " << out_throttle << std::endl;
-        fileLog.close();
 
       } else {
         // Manual driving
