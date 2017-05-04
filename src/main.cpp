@@ -46,9 +46,9 @@ int main()
 
   // Initialize the PID controller.
   PID pid;
-  static double init_Kp = 0.6;
+  static double init_Kp = 0.66;
   static double init_Ki = 0.15;
-  static double init_Kd = 10.0;
+  static double init_Kd = 11.0;
   static unsigned int integral_length = 2;
   //static unsigned int twiddle_length = 5660; // this is when to optimize twiddle. every lap
   //static unsigned int twiddle_length = 3800; // this is when to optimize twiddle. every lap
@@ -122,7 +122,7 @@ int main()
           */
 
           // limit speed with braking
-          if (in_speed > 65.)
+          if (in_speed > 90.)
             out_throttle = -0.1;
           else
             out_throttle = 1.0;
@@ -135,13 +135,23 @@ int main()
           }
           else if (in_speed < 60.)
           {
-            pid.Kp_ = init_Kp * 0.8;
+            pid.Kp_ = init_Kp * 0.95;
             pid.Kd_ = init_Kd * 1.2;
+          }
+          else if (in_speed < 66.)
+          {
+            pid.Kp_ = init_Kp * 0.9;
+            pid.Kd_ = init_Kd * 1.4;
+          }
+          else if (in_speed < 73.)
+          {
+            pid.Kp_ = init_Kp * 0.85;
+            pid.Kd_ = init_Kd * 1.6;
           }
           else
           {
-            pid.Kp_ = init_Kp * 0.5;
-            pid.Kd_ = init_Kd * 1.5;
+            pid.Kp_ = init_Kp * 0.6;
+            pid.Kd_ = init_Kd * 1.8;
           }
 
           // predict the steering angle
