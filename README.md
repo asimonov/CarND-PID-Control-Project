@@ -14,7 +14,7 @@ to drive the system state to the ideal state. The detailed description is
 Proportional part is defining how sensitive our response is. If we set Proportional coefficient
 higher the system tends to 'ideal state' quicker. But it may overshoot. So there is a tradeoff.
 
-Same for Differential part. The higher the differential coefficient the more responsive
+For Differential part the higher the coefficient the more responsive
 the controller is to the rate of change in state, 
 which tends to dampen the oscillations inherent to
 Proportional part of PID.
@@ -42,7 +42,10 @@ to dampen any oscillations harder.
 
 I then proceeded to repeat the parameter scaling for 40, 50, 60 and 70 mph.
 The final PID controller parameters are graduated depending on current simulator speed.
-I also ease off accelerator when steering angle goes above 3.75 degrees either way.
+I also ease off accelerator when steering angle goes above 3.75 degrees either way which
+causes the controller to pretty much never apply the brakes as system self-corrects any
+oscillations when they start to appear at higher speeds. If you change `speed_limit` variable
+to something smaller, like 30 or 50 mph you will see the car applies brakes regularly.
 
 The PID-controlled car manages to go between about 55mph and 70mph, 
 depending on the part of the track.
