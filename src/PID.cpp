@@ -27,45 +27,35 @@ void PID::Init(double Kp, double Ki, double Kd, unsigned long integral_len, unsi
   twiddle_len_ = twiddle_len;
   total_steps_ = 0;
   cte_history_ = deque<double>();
-  speed_history_ = deque<double>();
-  dt_history_ = deque<double>();
 }
 
-double PID::PredictSteering(double cte, double speed, double dt){
+double PID::PredictSteering(double cte){
   double angle = 0.0;
-  double factor = 100.0;
-  double speed_adj = speed;// > 0 ? speed : 0.001;
-  double cte_adj = cte;// /(factor * speed_adj * dt);
   double cte_diff = 0.0;
-  double cte_int = cte_adj;
+  double cte_int = cte;
   // assuming history objects do not yet contain the current observations
   if (cte_history_.size()>1)
   {
     int cnt = 0;
-    for (long i=0; i<std::min(integral_len_, cte_history_.size()); i++)
+    for (auto it = cte_history_.begin(), last = cte_history_.end(); cnt<std::min(integral_len_, cte_history_.size()) && it<=last; it++)
     {
-      double c = cte_history_[i]; // / (factor * speed_history_[i]*dt_history_[i]);
-      if (i==0)
-        cte_diff = (cte_adj - c);
+      double c = *it;
+      if (cnt==0)
+        cte_diff = (cte - c);
       cte_int += c;
       cnt++;
     }
-    cte_int /= cnt;
+    cte_int /= cnt; // take average sum (i.e. integral) to make tuning coefficient easier
   }
-  angle = -Kp_*cte_adj - Ki_*cte_int - Kd_*cte_diff;
+  angle = -Kp_*cte - Ki_*cte_int - Kd_*cte_diff;
   return angle;
 }
 
-void PID::UpdateError(double cte, double speed, double dt) {
+void PID::UpdateError(double cte) {
   cte_history_.push_front(cte);
-  double speed_adj = speed > 0 ? speed : 0.001;
-  speed_history_.push_front(speed_adj);
-  dt_history_.push_front(dt);
   if (cte_history_.size() > std::max(integral_len_, twiddle_len_))
   {
     cte_history_.pop_back();
-    speed_history_.pop_back();
-    dt_history_.pop_back();
   }
   total_steps_++;
 }
@@ -135,54 +125,7 @@ void PID::TwiddleIfEnoughHistory()
         }
         break;
 
-      case 1:// Ki tweaking
-        std::cout << "Twiddle tweaking: Ki" << std::endl;
-
-        if (up_down_unch_ == 0) {
-          std::cout << "bump: up" << std::endl;
-          up_down_unch_ = 1;
-          Ki_ += d_Ki_;
-        } else if (up_down_unch_ == 1) {
-          double error = TotalError();
-          std::cout << "error: " << error << std::endl;
-          if (error < best_error_)
-          {
-            best_error_ = error;
-            std::cout << "bump size: increase" << std::endl;
-            d_Ki_ *= 1.1;
-            std::cout << "bump: up" << std::endl;
-            Ki_ += d_Ki_;
-          } else {
-            std::cout << "bump: down" << std::endl;
-            up_down_unch_ = -1;
-            Ki_ -= 2*d_Ki_;
-          }
-        } else {
-          // up_down_unch_ == -1
-          double error = TotalError();
-          std::cout << "error: " << error << std::endl;
-          if (error < best_error_)
-          {
-            best_error_ = error;
-            std::cout << "bump size: increase" << std::endl;
-            d_Ki_ *= 1.1;
-            std::cout << "bump: down" << std::endl;
-            Ki_ -= d_Ki_;
-          } else {
-            std::cout << "bump: up (to unch)" << std::endl;
-            Ki_ += d_Ki_;
-            std::cout << "bump size: decrease" << std::endl;
-            d_Ki_ *= 0.9;
-            up_down_unch_ = 0;
-
-            std::cout << "move to next param" << std::endl;
-            idx_current_param_ = 2;
-            TwiddleIfEnoughHistory(); // just handle the next parameter
-          }
-        }
-        break;
-
-      case 2:// Kd tweaking
+      case 1:// Kd tweaking
         std::cout << "Twiddle tweaking: Kd" << std::endl;
 
         if (up_down_unch_ == 0) {
@@ -220,6 +163,53 @@ void PID::TwiddleIfEnoughHistory()
             Kd_ += d_Kd_;
             std::cout << "bump size: decrease" << std::endl;
             d_Kd_ *= 0.9;
+            up_down_unch_ = 0;
+
+            std::cout << "move to next param" << std::endl;
+            idx_current_param_ = 2;
+            TwiddleIfEnoughHistory(); // just handle the next parameter
+          }
+        }
+        break;
+
+      case 2:// Ki tweaking
+        std::cout << "Twiddle tweaking: Ki" << std::endl;
+
+        if (up_down_unch_ == 0) {
+          std::cout << "bump: up" << std::endl;
+          up_down_unch_ = 1;
+          Ki_ += d_Ki_;
+        } else if (up_down_unch_ == 1) {
+          double error = TotalError();
+          std::cout << "error: " << error << std::endl;
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
+            d_Ki_ *= 1.1;
+            std::cout << "bump: up" << std::endl;
+            Ki_ += d_Ki_;
+          } else {
+            std::cout << "bump: down" << std::endl;
+            up_down_unch_ = -1;
+            Ki_ -= 2*d_Ki_;
+          }
+        } else {
+          // up_down_unch_ == -1
+          double error = TotalError();
+          std::cout << "error: " << error << std::endl;
+          if (error < best_error_)
+          {
+            best_error_ = error;
+            std::cout << "bump size: increase" << std::endl;
+            d_Ki_ *= 1.1;
+            std::cout << "bump: down" << std::endl;
+            Ki_ -= d_Ki_;
+          } else {
+            std::cout << "bump: up (to unch)" << std::endl;
+            Ki_ += d_Ki_;
+            std::cout << "bump size: decrease" << std::endl;
+            d_Ki_ *= 0.9;
             up_down_unch_ = 0;
 
             std::cout << "move to next param" << std::endl;

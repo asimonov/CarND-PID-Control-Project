@@ -48,9 +48,9 @@ int main()
   PID pid;
 
   // PID parameters
-  double init_Kp = 0.15;
+  double init_Kp = 0.14;
   double init_Ki = 0.0;
-  double init_Kd = 0.6;
+  double init_Kd = 0.65;
   unsigned int integral_length = 2;
   unsigned int twiddle_length = 1400; // this is when to optimize twiddle. ideally from each lap. UNUSED
 
@@ -106,9 +106,9 @@ int main()
 
           // limit speed with braking
           if (in_speed > speed_limit)
-            out_throttle = -0.1;
+            out_throttle = -0.1; // brake
           else
-            out_throttle = 1.0;
+            out_throttle = 1.0; // full throttle
 
           // vary PID parameters with speed. higher speed makes system more sensitive
           // hence we decrease proportional control and increase derivative control (to dampen oscillations)
@@ -149,7 +149,7 @@ int main()
           }
 
           // predict the steering angle using PID controller
-          out_steering = pid.PredictSteering(in_cte, in_speed, dt);
+          out_steering = pid.PredictSteering(in_cte);
 
           // ease off accelerator if steering is too steep
           if (frame > 100 && (abs(out_steering) > safe_steering))
@@ -162,7 +162,7 @@ int main()
             out_steering = 1.;
 
           // record new error in PID history for later use
-          pid.UpdateError(in_cte, in_speed, dt);
+          pid.UpdateError(in_cte);
           // Twiddle iteration process. UNUSED as it was found ineffective.
           //pid.TwiddleIfEnoughHistory();
 
