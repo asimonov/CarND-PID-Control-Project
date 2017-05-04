@@ -11,18 +11,21 @@ ideal system state and the measured state), namely Proportional, Differential an
 to drive the system state to the ideal state. The detailed description is 
 [here](https://en.wikipedia.org/wiki/PID_controller)
 
-Proportional part is defining how sensitive out system is. If we set Proportional coefficient
-higher the system tends to 'ideal state' quicker. But it may overshoot. So there is tradeoff.
+Proportional part is defining how sensitive our response is. If we set Proportional coefficient
+higher the system tends to 'ideal state' quicker. But it may overshoot. So there is a tradeoff.
 
 Same for Differential part. The higher the differential coefficient the more responsive
-the controller is to the change in state, which tends to dampen the oscillations inherent to
+the controller is to the rate of change in state, 
+which tends to dampen the oscillations inherent to
 Proportional part of PID.
 
 Integral part of PID is used to correct for persistent bias, if it exists. Like a side wind
 pushing the car off track etc. In this problem integral part was not required.
 
 Here is a video of the implementation:
-[![Screenshot of simulator](./video/screen-shot.png)]()
+[![Screenshot of simulator](./video/screen-shot.png)](https://www.youtube.com/watch?v=7fMuwekzXyE)
+
+[test](https://www.youtube.com/watch?v=7fMuwekzXyE)
 
 
 ## Dependencies
